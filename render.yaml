@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: grainger-app
-    runtime: image
-    image:
-      type: docker
-      dockerfile: Dockerfile
