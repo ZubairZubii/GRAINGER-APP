@@ -1,11 +1,8 @@
 from flask import Flask, request, jsonify
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import chromedriver_autoinstaller
 import os
 
 app = Flask(__name__)
@@ -18,44 +15,40 @@ def scrape_endpoint():
         return jsonify({"error": "Missing ?product_id"}), 400
 
     try:
-        # ✅ Install ChromeDriver automatically (for Railway)
-        chromedriver_autoinstaller.install()
-
-        # ✅ Chrome Options for headless cloud
-        options = Options()
+        # ✅ Setup undetected Chrome (works in Railway)
+        options = uc.ChromeOptions()
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920x1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-infobars")
-        options.add_argument("--single-process")
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option("useAutomationExtension", False)
         options.add_argument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/116.0.0.0 Safari/537.36"
         )
 
-        service = Service()
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = uc.Chrome(options=options)
         wait = WebDriverWait(driver, 20)
 
-        # ✅ Navigate & Scrape
+        # ✅ Step 1: Go to homepage
         driver.get("https://www.grainger.com/")
 
+        # ✅ Step 2: Enter product ID
         search_input = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input.gcom__typeahead-query-field"))
         )
         search_input.clear()
         search_input.send_keys(product_id)
 
+        # ✅ Step 3: Click search button
         search_button = driver.find_element(By.CSS_SELECTOR, "button.gcom__typeahead-submit-button")
         search_button.click()
 
+        # ✅ Step 4: Extract price
         price_elem = wait.until(
             EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "span[data-testid^='pricing-component']")
