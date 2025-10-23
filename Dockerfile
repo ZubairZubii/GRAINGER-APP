@@ -1,22 +1,52 @@
+# Use lightweight Python 3.11 image
 FROM python:3.11-slim
 
-# Install Chrome and dependencies (Debian 12+ compatible)
-RUN apt-get update && apt-get install -y wget gnupg unzip && \
-    mkdir -p /etc/apt/keyrings && \
-    wget -q -O /etc/apt/keyrings/google-linux-signing-key.gpg https://dl.google.com/linux/linux_signing_key.pub && \
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-linux-signing-key.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update && apt-get install -y google-chrome-stable && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install system dependencies for Chrome and Selenium
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    unzip \
+    curl \
+    ca-certificates \
+    fonts-liberation \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxrandr2 \
+    libxss1 \
+    libxtst6 \
+    libatk1.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libgtk-3-0 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libatk-bridge2.0-0 \
+    libgbm1 \
+    && mkdir -p /etc/apt/keyrings \
+    && wget -q -O /etc/apt/keyrings/google-linux-signing-key.gpg https://dl.google.com/linux/linux_signing_key.pub \
+    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-linux-signing-key.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update && apt-get install -y google-chrome-stable \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app
+# Copy app files
 COPY . .
 
-# Environment variable for Flask
+# Environment variables
 ENV PORT=8080
 
-# Run Flask app
+# Expose the port
+EXPOSE 8080
+
+# Run the Flask app using Gunicorn (production-ready)
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]
