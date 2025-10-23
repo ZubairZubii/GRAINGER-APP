@@ -42,9 +42,6 @@ def scrape_endpoint():
         )
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option("useAutomationExtension", False)
-        
-        # Use system Chrome on Render
-        chrome_options.binary_location = "/usr/bin/google-chrome"
 
         driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
@@ -87,7 +84,7 @@ def scrape_endpoint():
                 driver.quit()
             except:
                 pass
- #commit
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
