@@ -17,29 +17,28 @@ def scrape_endpoint():
         return jsonify({"error": "Missing ?product_id"}), 400
 
     try:
-        # Chrome options
-        options = Options()
-        options.add_argument("--headless=new")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option("useAutomationExtension", False)
-        options.add_argument(
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")  # <-- use stable headless
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_argument("--remote-debugging-port=9222")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/116.0.0.0 Safari/537.36"
         )
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option("useAutomationExtension", False)
 
-        # Setup driver
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         wait = WebDriverWait(driver, 20)
 
-        # Go to Grainger homepage
         driver.get("https://www.grainger.com/")
 
-        # Search product
         search_input = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input.gcom__typeahead-query-field"))
         )
@@ -49,7 +48,6 @@ def scrape_endpoint():
         search_button = driver.find_element(By.CSS_SELECTOR, "button.gcom__typeahead-submit-button")
         search_button.click()
 
-        # Wait for price element
         price_elem = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "span[data-testid^='pricing-component']"))
         )
