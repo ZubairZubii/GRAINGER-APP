@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -6,35 +7,49 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-import os
 
 app = Flask(__name__)
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "Grainger Scraper API is running",
+        "usage": "/scrape?product_id=YOUR_PRODUCT_ID",
+        "example": "/scrape?product_id=34RY84"
+    })
 
 @app.route("/scrape", methods=["GET"])
 def scrape_endpoint():
     product_id = request.args.get("product_id")
     if not product_id:
-        return jsonify({"error": "Missing ?product_id"}), 400
+        return jsonify({"error": "Missing ?product_id parameter"}), 400
 
+    driver = None
     try:
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # <-- use stable headless
+        chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        chrome_options.add_argument("--remote-debugging-port=9222")
         chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-software-rasterizer")
         chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "user-agent=Mozilla/5.0 (X11; Linux x86_64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/116.0.0.0 Safari/537.36"
+            "Chrome/120.0.0.0 Safari/537.36"
         )
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option("useAutomationExtension", False)
+        
+        # Use system Chrome on Render
+        chrome_options.binary_location = "/usr/bin/google-chrome"
 
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=chrome_options
+        )
         wait = WebDriverWait(driver, 20)
 
         driver.get("https://www.grainger.com/")
@@ -53,14 +68,26 @@ def scrape_endpoint():
         )
         price = price_elem.text.strip()
 
-        return jsonify({"product_id": product_id, "price": price})
+        return jsonify({
+            "success": True,
+            "product_id": product_id,
+            "price": price
+        })
 
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "product_id": product_id
+        }), 500
 
     finally:
-        driver.quit()
+        if driver:
+            try:
+                driver.quit()
+            except:
+                pass
 
 if __name__ == "__main__":
-    # For local development
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
