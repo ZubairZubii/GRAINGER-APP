@@ -1,4 +1,5 @@
 Flask
-selenium
-webdriver-manager
 gunicorn
+selenium
+chromedriver-autoinstaller
+webdriver-manager
